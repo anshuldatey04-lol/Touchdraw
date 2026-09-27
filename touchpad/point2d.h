@@ -14,6 +14,7 @@ struct Point2DList
 {
   Point2D* Entries;
   unsigned int Size;
+  unsigned int Capacity;
 };
 
 typedef struct Point2DList Point2DList;

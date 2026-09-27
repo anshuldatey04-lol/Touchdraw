@@ -12,7 +12,17 @@ struct HID_TOUCH_LINK_COL_INFO
 {
   // LinkColID is an ID to parse HID report
   USHORT LinkColID;
+  // Physical extent of the touchpad surface (device physical units, e.g.
+  // hundredths of a millimeter). Used for aspect-ratio computation only.
   RECT PhysicalRect;
+  // Logical coordinate range from the HID report descriptor. Per-event
+  // X/Y values from HidP_GetUsageValue are in THESE units, so these are
+  // what the pad->screen mapping normalizes against. X and Y caps share
+  // a LinkCollection entry, so both ranges are stored here.
+  LONG LogicalXMin;
+  LONG LogicalXMax;
+  LONG LogicalYMin;
+  LONG LogicalYMax;
 
   // As we cannot identify which link collection contains which data, we need
   // all these flags to identify which data the link collection contains.

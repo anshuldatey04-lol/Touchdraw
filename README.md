@@ -1,84 +1,90 @@
-# Handwriting touchpad
+# TouchDraw — your touchpad as an absolute drawing tablet
 
-This project is about making use of touchpad for handwriting. It is heavily inspired by the Apple Trackpad on MacBook. As a poor undergraduate student who can't afford a MacBook, I decided to build a software that can turn my touchpad into a device that can be used for handwriting.
+Write and sketch math directly with your laptop's built-in touchpad — no drawing tablet, no stylus.
+TouchDraw treats the touchpad as a 1:1 miniature of the canvas: touch the top-right of the pad,
+ink appears at the top-right of the canvas. Lift your finger and put it down elsewhere and the
+ink jumps there (true absolute mapping, like a graphics tablet — not relative cursor motion).
 
-> Why would you want to do handwriting on a computer? Can you just type the word?
+Built on [`ichisadashioko/windows-touchpad`](https://github.com/ichisadashioko/windows-touchpad),
+which solved the hard part: reading absolute finger coordinates from Windows Precision Touchpad
+(PTP) devices via raw HID input instead of standard mouse APIs.
 
-I am a fan of practicing writing those crazy difficult Japanese Kanji. As a Japanese learner, you will not know how to type those words presented in Kanji. There is some words (e.g. people names) that even if you know the reading but when you type the reading (e.g. with Microsoft IME), it will never give you the kanji that you want.
+## Run it
 
-## Goal
+**Requirements:** Windows 10/11 laptop with a **Precision Touchpad** (most laptops since ~2017).
+The app prints a warning at startup if no compatible touchpad is found.
 
-- [x] Retrieve absolute touchpad touches' positions
-- [x] Block mouse movement while using trackpad for handwriting. We use Windows Hooks to block mouse input (#5). Thanks to @alvinhochun.
-- [x] Visualize touch input position on GUI
-- [ ] Integrate with TensorFlow (threading)
+- **Easiest:** double-click `TouchDraw.exe` (no console window), or use the desktop shortcut.
+- Or install the MSIX package (see below) to get a Start Menu entry and clean uninstall.
+- Or run `touchdraw.exe` (console build) if you want the debug log output.
 
-## User guide
+Press **F3**, draw with one finger on the touchpad, **ESC** to get your cursor back.
 
-- The application can only be focused using `Alt+Tab`.
-- Press `F3` to enter touchpad writing mode. __CAUTION__ Your mouse movement will be locked while you are in touchpad writing mode.
-- Press `ESC` to exit touchpad writing mode.
-- Press `c` to clear the canvas.
-- The application currently can only be resized consistently with `Windows Key` + `Arrow Keys` as the application does not handle clicking properly.
+## Controls
 
-## Current progress
+| Action | Mouse / toolbar | Keyboard |
+|---|---|---|
+| Enter / exit draw mode | mode indicator (top-right) | `F3` / `ESC` |
+| Pen / eraser | Pen, Eraser buttons | `E` |
+| Colors | 5 swatches + Custom (native color picker) | `1`–`5` |
+| Brush size (1–64px, eraser follows it) | A− / A+ | `[` / `]` |
+| Undo (64 steps) | Undo | `Ctrl+Z` |
+| Redo | Redo | `Ctrl+Y` or `Ctrl+Shift+Z` |
+| Clear canvas (undoable) | Clear | `C` |
+| Save drawing (`.tdraw`) | Save | `Ctrl+S` |
+| Open drawing (`.tdraw`) | Open | `Ctrl+O` |
+| Export picture (`.bmp`) | BMP | — |
+| Quit | window X | `Q` |
 
-- We have been able to get the absolute touchpad input positions and visualize them on a UI window.
-- We are having some problem with rendering the UI because the rendering workload is too heavy and the UI is re-rendered for every touch input events.
+While in draw mode the cursor is hidden and confined to the TouchDraw window
+(`ClipCursor`), so touchpad motion can't click other apps — but the toolbar stays
+clickable. Files:
 
-## CI status
+- `.tdraw` — native format (strokes + colors + widths), reopens fully editable.
+- `.bmp` — 24-bit export of exactly what's on the canvas.
 
-![C/C++ CI](https://github.com/ichisadashioko/windows-touchpad/workflows/CI/badge.svg)
+## How the mapping works
 
-## Terminology
+1. At startup the app enumerates HID devices and reads the touchpad's report
+   descriptor: per-contact link collections give **logical** X/Y ranges
+   (`HID_USAGE_PAGE_GENERIC` X/Y, absolute only) plus tip-switch / contact-ID /
+   contact-count usages.
+2. Each `WM_INPUT` report is decoded with `HidP_GetUsageValue` / `HidP_GetUsages`
+   into down / move / up touch events, tracked by contact ID (single-finger ink).
+3. Raw logical coordinates are normalized against the descriptor's
+   **LogicalMin/LogicalMax** (not the physical extent, which is in units like
+   hundredths of a millimeter), then scaled letterboxed into the canvas —
+   aspect ratio preserved, no stretch. Window resizes re-map live; strokes are
+   stored in pad units so nothing is lost.
+4. The process is per-monitor DPI aware, so mapping is in true physical pixels.
 
-- `digitizer`, `touchpad`, and `trackpad` are refering to the same things in this project.
-- (a) `touch` and (a) `contact` are refering to the representation of the data generated when your finger(s) come(s) into contact with the hardware - the touchpad.
-- `HID` - [human interface device](https://en.wikipedia.org/wiki/Human_interface_device) - refers to devices used by human to "communicate" with computers (even though they can be used by bot).
+## Build from source
 
-## Progress
+- Toolchain: MSVC (Build Tools 2022 work) + Windows 10 SDK. No extra dependencies.
+- `touchdraw/build.bat console touchdraw.exe` — console build (debug log).
+- `touchdraw/build.bat windows TouchDraw.exe` — GUI build (no console).
+- Or open `touchpad/touchpad.vcxproj` in Visual Studio (`Debug|Win32`).
+- Headless logic tests (undo/redo, hit-test, file round-trip — no GUI needed):
+  compile `touchdraw/test_logic.c` with the `touchpad/*.c` sources and run it.
 
-- We want to get the figure's position when it comes into contact with the touchpad (hereby refered as raw input data).
-- Windows will send raw touchpad input data to GUI desktop application. (I am not sure how to get raw HID input from a console application.)
-- Most of the APIs are for C/C++ so I decided to use C/C++ to create native Windows Desktop Application.
-- We need to register our Desktop App for raw HID input so that Windows will send us the raw HID input data.
-- Registering for raw HID input data is done in `WndProc(HWND, UINT, WPARAM, LPARAM)` function.
-- `WndProc` is the event handler for Windows Desktop Application.
-- We can register for raw HID input data when receiving `WM_CREATE` message (event).
-- In Windows Desktop Application programing, the application receives `messages` from Windows and processes them in a callback function - `WndProc` in our case.
-- In order to register for raw HID input data, we only need to call [`RegisterRawInputDevices(PCRAWINPUTDEVICE, UINT, UINT)`][registerrawinputdevices] once.
-- We want Windows Precision Touchpad devices so our `RAWINPUTDEVICE` entry to be passed into `RegisterRawInputDevices` will look like this
+## Project layout
 
-```c
-RAWINPUTDEVICE rid;
-
-rid.usUsagePage = HID_USAGE_PAGE_DIGITIZER;
-rid.usUsage     = HID_USAGE_DIGITIZER_TOUCH_PAD;
-rid.dwFlags     = RIDEV_INPUTSINK;
-rid.hwndTarget  = hWnd;
+```
+touchpad/
+  main.c         app window, toolbar, mapping, input event flow (WM_INPUT consumer)
+  touchpad.c/h   raw-input HID helpers (device list, preparsed data, reports)
+  utils.c/h      HID capability table (link collections, X/Y ranges)
+  touchevents.c/h  down/move/up state machine keyed by contact ID
+  point2d.c/h    capacity-doubled point arrays
+  stroke.c/h     Stroke model (points + color + width), hit-testing
+  history.c/h    snapshot undo/redo (64 steps)
+  fileio.c/h     .tdraw save/open, .bmp export, file dialogs
 ```
 
-- After registering for raw HID input data, Windows will send us raw input data for all Windows Precision Touchpad devices.
-- If the device is connected after our register process, Windows will still send that device's raw HID input data to our Desktop Application so there is no need to calling `RegisterRawInputDevices` to get raw HID input data of devices that just has been connected.
-- However, we may still need to handle multiple devices.
-- The raw HID input data will be availabled with the `WM_INPUT` message (event).
-- We can call [`GetRawInputData(HRAWINPUT, UINT, LPVOID, PUINT, UINT)`][getrawinputdata] to get either header or raw input data of the device.
-- After getting raw input data, it will be in form of a `byte` pointer. In order to parse the raw input data, we need to do some processing with the preparsed data first.
-- The preparsed data can be retrieved with the [`GetRawInputDeviceInfo(HANDLE, UINT, LPVOID, PUINT)`][getrawinputdeviceinfoa] call.
-- After getting preparsed data, we have some helper functions from `hid.lib` to get information from the data.
-- We have to include the `hidusage.h` and `hidpi.h` headers in mentioned order. `hidpi.h` requires some definitions from `hidusage.h` but it doesn't include the `hidusage.h` header. `clang-format` will sort headers and put `hidpi.h` on top of `hidusage.h` which is a bad thing. They also require `Windows.h` header and they also do not include it.
-- We also need to add the `hid.lib` to additional dependencies in the Visual Studio project properties file. If you have multiple target platforms (e.g. `x86` and `x64`) or multiple build configurations (e.g. `Debug` and `Release`), you will have to manually add the `hid.lib` to all of them.
+The raw HID parsing (`touchpad.c`, `utils.c`, the `WM_INPUT` block in `main.c`)
+is the fragile, hard-won part — everything else is built around it without
+changing it.
 
-- With some methods from `hid.lib`, we can get the following information:
+## License
 
-    - the touchpad size (width and height)
-    - maximum number (the number - as all the touch data is) of touches per raw input message
-    - the link collection (ID) to get the tip switch value in each raw input message (to tell if the finger is currently on the touchpad surface or the finger is lifted from the touchpad surface)
-    - the link collection for each touches (contacts) to get/locate the touch's data (position, tip switch, etc.) in the raw input message
-
-- There is no convenient functions (e.g. `GetDeviceWidth()`) to retrieve those information. We have to call `HidP_GetValuesCaps` to get a array of device's `capabilities`. And we have to iterate through them to check their HID `Usage` and `UsagePage` to see if they contain the data (e.g. the width of the device) that we want.
-- However, that array doesn't contain all the information that we need. There is another array called `button capabilities` from the `HidP_GetButtonCaps` API call.
-
-[getrawinputdeviceinfoa]: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getrawinputdeviceinfoa
-[getrawinputdata]: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getrawinputdata
-[registerrawinputdevices]: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerrawinputdevices
+Same as upstream (`LICENSE`).

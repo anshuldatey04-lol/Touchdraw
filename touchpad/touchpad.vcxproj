@@ -44,6 +44,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="fileio.c" />
+    <ClCompile Include="history.c" />
     <ClCompile Include="point2d.c" />
     <ClCompile Include="stroke.c" />
     <ClCompile Include="touchevents.c" />
@@ -51,6 +53,8 @@
     <ClCompile Include="utils.c" />
     <ClCompile Include="termcolor.h" />
     <ClCompile Include="main.c" />
+    <ClInclude Include="fileio.h" />
+    <ClInclude Include="history.h" />
     <ClInclude Include="point2d.h" />
     <ClInclude Include="stroke.h" />
     <ClInclude Include="touchevents.h" />

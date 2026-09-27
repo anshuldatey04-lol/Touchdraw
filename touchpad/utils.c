@@ -175,6 +175,11 @@ int FindLinkCollectionInList(HID_LINK_COL_INFO_LIST* linkColInfoList, USHORT lin
     linkColInfoList->Entries = (HID_TOUCH_LINK_COL_INFO*)mMalloc(sizeof(HID_TOUCH_LINK_COL_INFO), __FILE__, __LINE__);
 
     linkColInfoList->Entries[(*foundLinkColIdx)].LinkColID     = linkCollection;
+    linkColInfoList->Entries[(*foundLinkColIdx)].PhysicalRect  = (RECT){0, 0, 0, 0};
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalXMin   = 0;
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalXMax   = 0;
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalYMin   = 0;
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalYMax   = 0;
     linkColInfoList->Entries[(*foundLinkColIdx)].HasX          = 0;
     linkColInfoList->Entries[(*foundLinkColIdx)].HasY          = 0;
     linkColInfoList->Entries[(*foundLinkColIdx)].HasTipSwitch  = 0;
@@ -212,6 +217,11 @@ int FindLinkCollectionInList(HID_LINK_COL_INFO_LIST* linkColInfoList, USHORT lin
     linkColInfoList->Entries = tmpCollectionArray;
 
     linkColInfoList->Entries[(*foundLinkColIdx)].LinkColID     = linkCollection;
+    linkColInfoList->Entries[(*foundLinkColIdx)].PhysicalRect  = (RECT){0, 0, 0, 0};
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalXMin   = 0;
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalXMax   = 0;
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalYMin   = 0;
+    linkColInfoList->Entries[(*foundLinkColIdx)].LogicalYMax   = 0;
     linkColInfoList->Entries[(*foundLinkColIdx)].HasX          = 0;
     linkColInfoList->Entries[(*foundLinkColIdx)].HasY          = 0;
     linkColInfoList->Entries[(*foundLinkColIdx)].HasTipSwitch  = 0;
